@@ -17,10 +17,6 @@ module VagrantPlugins
         end
 
         def call(env)
-          env[:ui].info "Machine action: #{env[:machine_action]}"
-          env[:ui].info "Force Confirm Destroy: #{env[:force_confirm_destroy]}"
-          env[:ui].info "Force Confirm Destroy Result: #{env[:force_confirm_destroy_result]}"
-          
           # skip if machine is not active on destroy action
           # return @app.call(env) if !@machine.id && env[:machine_action] == :destroy
           return @app.call(env) if !@updater.ip_cache.get_host( @machine.name ) && env[:machine_action] == :destroy
