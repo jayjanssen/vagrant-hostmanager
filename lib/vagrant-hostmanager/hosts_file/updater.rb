@@ -1,15 +1,18 @@
 require 'tempfile'
+require 'yaml'
 
 module VagrantPlugins
   module HostManager
     module HostsFile
 
       class Updater
+        attr_accessor :ip_cache
 
         def initialize(global_env, provider)
           @global_env = global_env
           @config = Util.get_config(@global_env)
           @provider = provider
+          @ip_cache = IPcache.new( @global_env )
         end
 
         def update_guest(machine)
@@ -90,7 +93,11 @@ module VagrantPlugins
         end
 
         def get_hosts_file_entry(machine, resolving_machine)
-          ip = get_ip_address(machine, resolving_machine)
+          ip = @ip_cache.get_host( machine.name )
+          if ip == nil
+            ip = get_ip_address(machine, resolving_machine )
+            @ip_cache.set_host( machine.name, ip )
+          end
           host = machine.config.vm.hostname || machine.name
           aliases = machine.config.hostmanager.aliases
           if ip != nil
@@ -199,6 +206,45 @@ module VagrantPlugins
             # without updating the hostsfile.
           end
         end
+      end
+      
+      
+      class IPcache
+        def initialize( global_env )
+          @filename = global_env.local_data_path.to_s  + "/ip_cache.yml"
+          @cache = fetch_ip_cache
+        end
+    
+        def get_host( host ) 
+          @cache[host]
+        end
+    
+        def set_host( host, ip )
+          @cache[host] = ip
+          store_ip_cache
+        end
+    
+        def delete_host( host )
+          @cache.delete( host )
+          store_ip_cache
+        end
+
+        private 
+    
+        def store_ip_cache
+          File.open( @filename, "w" ) do |file|
+            file.write @cache.to_yaml
+          end
+        end
+
+        def fetch_ip_cache
+          if File.exists?( @filename ) 
+            YAML::load_file @filename
+          else
+            Hash.new
+          end 
+        end
+    
       end
     end
   end

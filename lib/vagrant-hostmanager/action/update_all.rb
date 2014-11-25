@@ -17,8 +17,21 @@ module VagrantPlugins
         end
 
         def call(env)
+          env[:ui].info "Machine action: #{env[:machine_action]}"
+          env[:ui].info "Force Confirm Destroy: #{env[:force_confirm_destroy]}"
+          env[:ui].info "Force Confirm Destroy Result: #{env[:force_confirm_destroy_result]}"
+          
           # skip if machine is not active on destroy action
-          return @app.call(env) if !@machine.id && env[:machine_action] == :destroy
+          # return @app.call(env) if !@machine.id && env[:machine_action] == :destroy
+          return @app.call(env) if !@updater.ip_cache.get_host( @machine.name ) && env[:machine_action] == :destroy
+        
+          # Return if the destroy was not confirmed
+          return @app.call(env) if env[:machine_action] == :destroy and env[:force_confirm_destroy_result] == false and env[:force_confirm_destroy] == false 
+            
+          # Purge the machine from the ip cache
+          if env[:machine_action] == :destroy
+            @updater.ip_cache.delete_host( @machine.name )
+          end
 
           # check config to see if the hosts file should be update automatically
           return @app.call(env) unless @config.hostmanager.enabled?

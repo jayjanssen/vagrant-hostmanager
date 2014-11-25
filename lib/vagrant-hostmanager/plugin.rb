@@ -21,7 +21,7 @@ module VagrantPlugins
       end
 
       action_hook(:hostmanager, :machine_action_destroy) do |hook|
-        hook.prepend(Action.update_all)
+        hook.append(Action.update_all)
       end
 
       provisioner(:hostmanager) do
